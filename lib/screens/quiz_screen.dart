@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import '../providers/quiz_provider.dart';
 
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key});
+  final QuizProvider quizProvider;
+
+  const QuizScreen({super.key, required this.quizProvider});
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-  final QuizProvider _quizProvider = QuizProvider();
+  late QuizProvider _quizProvider;
 
   @override
   void initState() {
     super.initState();
+    _quizProvider = widget.quizProvider;
     _loadQuestions();
   }
 
@@ -30,12 +33,21 @@ class _QuizScreenState extends State<QuizScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Русская Викторина'),
+        title: const Text('Викторина'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 2,
+        toolbarHeight: 48,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
-      body: _buildBody(),
+      body: SafeArea(
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -61,10 +73,10 @@ class _QuizScreenState extends State<QuizScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(),
-          SizedBox(height: 20),
+          SizedBox(height: 16),
           Text(
             'Загружаем вопросы...',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],
       ),
@@ -73,19 +85,19 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Widget _buildErrorScreen() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 20),
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
             Text(
               _quizProvider.error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.red),
+              style: const TextStyle(fontSize: 14, color: Colors.red),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 _loadQuestions();
@@ -93,9 +105,9 @@ class _QuizScreenState extends State<QuizScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              child: const Text('Попробовать снова'),
+              child: const Text('Попробовать снова', style: TextStyle(fontSize: 14)),
             ),
           ],
         ),
@@ -105,35 +117,44 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Widget _buildEmptyScreen() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
-          const SizedBox(height: 20),
-          const Text(
-            'Вопросы не загружены',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _loadQuestions,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.quiz_outlined, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Вопросы не загружены',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            child: const Text('Загрузить вопросы'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadQuestions,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text('Загрузить вопросы', style: TextStyle(fontSize: 14)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildQuizScreen() {
     final question = _quizProvider.currentQuestion;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Если это последний вопрос и ответ подтвержден, показываем результат
+    if (_quizProvider.answerSubmitted && _quizProvider.isLastQuestion) {
+      return _buildResultsScreen();
+    }
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -142,10 +163,10 @@ class _QuizScreenState extends State<QuizScreen> {
             value: _quizProvider.progress,
             backgroundColor: Colors.grey[300],
             color: Colors.blue,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
+            minHeight: 4,
+            borderRadius: BorderRadius.circular(2),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // Счет и прогресс
           Row(
@@ -154,75 +175,267 @@ class _QuizScreenState extends State<QuizScreen> {
               Text(
                 'Счет: ${_quizProvider.score}',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
               ),
               Text(
-                'Вопрос ${_quizProvider.currentQuestionIndex + 1}/${_quizProvider.totalQuestions}',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                '${_quizProvider.currentQuestionIndex + 1}/${_quizProvider.totalQuestions}',
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
+
+          // Уровень сложности
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getDifficultyColor(_quizProvider.currentDifficulty).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getDifficultyIcon(_quizProvider.currentDifficulty),
+                  size: 12,
+                  color: _getDifficultyColor(_quizProvider.currentDifficulty),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Уровень: ${_quizProvider.currentDifficulty}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _getDifficultyColor(_quizProvider.currentDifficulty),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
 
           // Категория
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               question.category,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.blue,
                 fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Вопрос
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Text(
-                question.question,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  height: 1.3,
+          Container(
+            height: screenHeight * 0.12,
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  question.question,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
           // Ответы
           Expanded(
-            child: ListView.builder(
-              itemCount: _quizProvider.currentShuffledAnswers.length,
-              itemBuilder: (context, index) {
-                final answer = _quizProvider.currentShuffledAnswers[index];
-                return _buildAnswerButton(answer);
-              },
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  for (final answer in _quizProvider.currentShuffledAnswers)
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      child: _buildAnswerButton(answer),
+                    ),
+                ],
+              ),
             ),
           ),
 
           // Кнопка действия
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           _buildActionButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildResultsScreen() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Заголовок результата
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green, width: 1),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.celebration,
+                  size: 36,
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Викторина завершена!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Результаты
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    'Ваш результат:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_quizProvider.score}/${_quizProvider.totalQuestions * 10}',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _getResultMessage(_quizProvider.score, _quizProvider.totalQuestions * 10),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Статистика
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildStatItem('Правильно', '${_quizProvider.score ~/ 10}', Colors.green),
+                  Container(width: 1, height: 30, color: Colors.grey[300]),
+                  _buildStatItem('Неправильно', '${_quizProvider.totalQuestions - (_quizProvider.score ~/ 10)}', Colors.red),
+                ],
+              ),
+            ),
+          ),
+
+          const Spacer(),
+
+          // Кнопки действий
+          Column(
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  _quizProvider.restartQuiz();
+                  _refreshUI();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 44),
+                ),
+                child: const Text(
+                  'Пройти еще раз',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.blue),
+                  minimumSize: const Size(double.infinity, 44),
+                ),
+                child: const Text(
+                  'В главное меню',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.grey,
+          ),
+        ),
+      ],
     );
   }
 
@@ -232,7 +445,6 @@ class _QuizScreenState extends State<QuizScreen> {
     IconData? icon;
     String? label;
 
-    // Подсветка выбранного ответа (даже если еще не подтвержден)
     bool isSelected = _quizProvider.isSelectedAnswer(answer);
 
     if (_quizProvider.answerSubmitted) {
@@ -240,50 +452,60 @@ class _QuizScreenState extends State<QuizScreen> {
         backgroundColor = Colors.green;
         textColor = Colors.white;
         icon = Icons.check;
-        label = 'ПРАВИЛЬНЫЙ ОТВЕТ';
+        label = 'ПРАВИЛЬНО';
       } else if (_quizProvider.isWrongAnswer(answer)) {
         backgroundColor = Colors.red;
         textColor = Colors.white;
         icon = Icons.close;
-        label = 'НЕПРАВИЛЬНЫЙ ОТВЕТ';
+        label = 'НЕПРАВИЛЬНО';
       }
     } else if (isSelected) {
-      // Подсветка выбранного (но еще не подтвержденного) ответа
       backgroundColor = Colors.blue[100];
       textColor = Colors.blue[900];
     }
 
     return Card(
       color: backgroundColor,
-      elevation: isSelected ? 4 : 2,
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      elevation: isSelected ? 2 : 1,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(6),
         side: isSelected
-            ? BorderSide(color: Colors.blue, width: 2)
+            ? const BorderSide(color: Colors.blue, width: 1.5)
             : BorderSide.none,
       ),
       child: ListTile(
-        leading: icon != null ? Icon(icon, color: textColor) : null,
+        dense: true,
+        minLeadingWidth: 24,
+        minVerticalPadding: 8,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        leading: icon != null
+            ? Icon(icon, color: textColor, size: 18)
+            : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (label != null)
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             Text(
               answer,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 color: textColor ?? Colors.black87,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -294,69 +516,13 @@ class _QuizScreenState extends State<QuizScreen> {
           }
         },
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(6),
         ),
       ),
     );
   }
 
   Widget _buildActionButton() {
-    if (_quizProvider.answerSubmitted && _quizProvider.isLastQuestion) {
-      return Column(
-        children: [
-          Card(
-            color: Colors.green[50],
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  const Icon(Icons.celebration, size: 48, color: Colors.green),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Викторина завершена!',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ваш результат: ${_quizProvider.score}/${_quizProvider.totalQuestions * 10}',
-                    style: const TextStyle(fontSize: 18),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _getResultMessage(_quizProvider.score, _quizProvider.totalQuestions * 10),
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              _quizProvider.restartQuiz();
-              _refreshUI();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: const Text(
-              'Начать новую викторину',
-              style: TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      );
-    }
-
     if (_quizProvider.answerSubmitted && !_quizProvider.isLastQuestion) {
       return ElevatedButton(
         onPressed: () {
@@ -366,37 +532,69 @@ class _QuizScreenState extends State<QuizScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 50),
+          minimumSize: const Size(double.infinity, 40),
+          padding: const EdgeInsets.symmetric(vertical: 8),
         ),
         child: const Text(
           'Следующий вопрос',
-          style: TextStyle(fontSize: 16),
+          style: TextStyle(fontSize: 14),
         ),
       );
     }
 
-    return ElevatedButton(
-      onPressed: _quizProvider.selectedAnswer != null ? () {
-        _quizProvider.submitAnswer();
-        _refreshUI();
-      } : null,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _quizProvider.selectedAnswer != null ? Colors.blue : Colors.grey,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 50),
-      ),
-      child: const Text(
-        'Подтвердить ответ',
-        style: TextStyle(fontSize: 16),
-      ),
-    );
+    if (!_quizProvider.answerSubmitted) {
+      return ElevatedButton(
+        onPressed: _quizProvider.selectedAnswer != null ? () {
+          _quizProvider.submitAnswer();
+          _refreshUI();
+        } : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _quizProvider.selectedAnswer != null ? Colors.blue : Colors.grey,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 40),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+        ),
+        child: const Text(
+          'Подтвердить ответ',
+          style: TextStyle(fontSize: 14),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   String _getResultMessage(int score, int maxScore) {
     final percentage = score / maxScore;
-    if (percentage >= 0.8) return 'Отличный результат! Вы настоящий эрудит!';
-    if (percentage >= 0.6) return 'Хороший результат! Вы хорошо разбираетесь во многих темах!';
-    if (percentage >= 0.4) return 'Неплохой результат! Есть куда стремиться!';
-    return 'Попробуйте еще раз! У вас все получится!';
+    if (percentage >= 0.8) return 'Отличный результат! 🎉';
+    if (percentage >= 0.6) return 'Хороший результат! 👍';
+    if (percentage >= 0.4) return 'Неплохой результат! 💪';
+    return 'Попробуйте еще раз! 🌟';
+  }
+
+  Color _getDifficultyColor(String difficulty) {
+    switch (difficulty) {
+      case 'легкий':
+        return Colors.green;
+      case 'средний':
+        return Colors.orange;
+      case 'сложный':
+        return Colors.red;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  IconData _getDifficultyIcon(String difficulty) {
+    switch (difficulty) {
+      case 'легкий':
+        return Icons.accessible_forward;
+      case 'средний':
+        return Icons.self_improvement;
+      case 'сложный':
+        return Icons.psychology;
+      default:
+        return Icons.help;
+    }
   }
 }

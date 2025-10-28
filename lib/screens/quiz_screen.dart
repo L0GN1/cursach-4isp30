@@ -109,6 +109,20 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               child: const Text('Попробовать снова', style: TextStyle(fontSize: 14)),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () {
+                // Принудительно используем локальные вопросы
+                _quizProvider.setDifficulty(_quizProvider.currentDifficulty);
+                _refreshUI();
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(color: Colors.orange),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text('Использовать локальные вопросы', style: TextStyle(fontSize: 14)),
+            ),
           ],
         ),
       ),
@@ -187,6 +201,32 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
           ),
           const SizedBox(height: 8),
+
+          // Индикатор источника вопросов
+          if (_quizProvider.usingLocalQuestions)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.wifi_off, size: 12, color: Colors.orange),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Локальные вопросы',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           // Уровень сложности
           Container(
@@ -286,6 +326,10 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildResultsScreen() {
+    final correctAnswers = _quizProvider.score ~/ 10;
+    final totalQuestions = _quizProvider.totalQuestions;
+    final percentage = (correctAnswers / totalQuestions) * 100;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -316,6 +360,24 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (_quizProvider.usingLocalQuestions)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.wifi_off, size: 16, color: Colors.orange),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Использовались локальные вопросы',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -346,6 +408,22 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
+                    '$correctAnswers из $totalQuestions правильных ответов',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${percentage.toStringAsFixed(1)}% правильных ответов',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
                     _getResultMessage(_quizProvider.score, _quizProvider.totalQuestions * 10),
                     style: TextStyle(
                       fontSize: 14,
@@ -367,9 +445,11 @@ class _QuizScreenState extends State<QuizScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStatItem('Правильно', '${_quizProvider.score ~/ 10}', Colors.green),
+                  _buildStatItem('Правильно', '$correctAnswers', Colors.green),
                   Container(width: 1, height: 30, color: Colors.grey[300]),
-                  _buildStatItem('Неправильно', '${_quizProvider.totalQuestions - (_quizProvider.score ~/ 10)}', Colors.red),
+                  _buildStatItem('Неправильно', '${totalQuestions - correctAnswers}', Colors.red),
+                  Container(width: 1, height: 30, color: Colors.grey[300]),
+                  _buildStatItem('Процент', '${percentage.toStringAsFixed(0)}%', Colors.blue),
                 ],
               ),
             ),
@@ -566,10 +646,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
   String _getResultMessage(int score, int maxScore) {
     final percentage = score / maxScore;
-    if (percentage >= 0.8) return 'Отличный результат! 🎉';
-    if (percentage >= 0.6) return 'Хороший результат! 👍';
-    if (percentage >= 0.4) return 'Неплохой результат! 💪';
-    return 'Попробуйте еще раз! 🌟';
+    if (percentage >= 0.8) return 'Отличный результат! 🎉\nВы настоящий эрудит!';
+    if (percentage >= 0.6) return 'Хороший результат! 👍\nОтличные знания!';
+    if (percentage >= 0.4) return 'Неплохой результат! 💪\nЕсть куда стремиться!';
+    return 'Попробуйте еще раз! 🌟\nУ вас всё получится!';
   }
 
   Color _getDifficultyColor(String difficulty) {

@@ -1,6 +1,5 @@
-name: russian_quiz
+name: cursach
 description: "викторина"
-
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -19,6 +19,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/images/

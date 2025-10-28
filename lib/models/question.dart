@@ -1,9 +1,9 @@
 class Question {
-  final String category;
-  final String question;
-  final String correctAnswer;
-  final List<String> incorrectAnswers;
-  final String difficulty;
+  final String category; //категория вопроса
+  final String question; //текст самого вопроса
+  final String correctAnswer; //правильный ответ
+  final List<String> incorrectAnswers; //список неправильных вариантов ответа
+  final String difficulty; //уровень сложности
 
   Question({
     required this.category,

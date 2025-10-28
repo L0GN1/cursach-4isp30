@@ -1,7 +1,75 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/question.dart';
 
 class QuizService {
-  List<Question> getQuestions() {
+  static const String _apiUrl = 'https://opentdb.com/api.php';
+
+  // Метод для получения вопросов из API
+  Future<List<Question>> getQuestionsFromApi({
+    int amount = 10,
+    String difficulty = 'easy'
+  }) async {
+    try {
+      final uri = Uri.parse('$_apiUrl?amount=$amount&difficulty=$difficulty&type=multiple');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        return _parseApiResponse(response.body);
+      } else {
+        throw Exception('API returned status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load questions from API: $e');
+    }
+  }
+
+  // Парсинг ответа от API
+  List<Question> _parseApiResponse(String responseBody) {
+    final jsonData = json.decode(responseBody);
+    final results = jsonData['results'] as List;
+
+    return results.map((item) {
+      return Question(
+        category: _decodeHtml(item['category']),
+        question: _decodeHtml(item['question']),
+        correctAnswer: _decodeHtml(item['correct_answer']),
+        incorrectAnswers: List<String>.from(item['incorrect_answers'])
+            .map(_decodeHtml)
+            .toList(),
+        difficulty: _mapDifficulty(item['difficulty']),
+      );
+    }).toList();
+  }
+
+  // Декодирование HTML entities
+  String _decodeHtml(String htmlString) {
+    return htmlString
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#039;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&uuml;', 'ü')
+        .replaceAll('&ouml;', 'ö')
+        .replaceAll('&auml;', 'ä')
+        .replaceAll('&eacute;', 'é')
+        .replaceAll('&iacute;', 'í')
+        .replaceAll('&ntilde;', 'ñ');
+  }
+
+  // Маппинг сложности на русский язык
+  String _mapDifficulty(String apiDifficulty) {
+    switch (apiDifficulty) {
+      case 'easy': return 'легкий';
+      case 'medium': return 'средний';
+      case 'hard': return 'сложный';
+      default: return 'легкий';
+    }
+  }
+
+  // Локальные вопросы (ваш существующий код)
+  List<Question> getLocalQuestions() {
     return [
       // Легкие вопросы
       Question(
@@ -44,6 +112,20 @@ class QuizService {
         question: 'Сколько дней в високосном году?',
         correctAnswer: '366',
         incorrectAnswers: ['365', '367', '364'],
+        difficulty: 'легкий',
+      ),
+      Question(
+        category: 'Природа',
+        question: 'Какое животное является самым быстрым на суше?',
+        correctAnswer: 'Гепард',
+        incorrectAnswers: ['Лев', 'Антилопа', 'Волк'],
+        difficulty: 'легкий',
+      ),
+      Question(
+        category: 'Кулинария',
+        question: 'Какой суп считается традиционным русским блюдом?',
+        correctAnswer: 'Щи',
+        incorrectAnswers: ['Гаспачо', 'Минестроне', 'Том-ям'],
         difficulty: 'легкий',
       ),
 
@@ -90,6 +172,20 @@ class QuizService {
         incorrectAnswers: ['ДДТ', 'Кино', 'Алиса'],
         difficulty: 'средний',
       ),
+      Question(
+        category: 'Наука',
+        question: 'Какой газ преобладает в атмосфере Земли?',
+        correctAnswer: 'Азот',
+        incorrectAnswers: ['Кислород', 'Углекислый газ', 'Аргон'],
+        difficulty: 'средний',
+      ),
+      Question(
+        category: 'География',
+        question: 'Какая река самая длинная в мире?',
+        correctAnswer: 'Нил',
+        incorrectAnswers: ['Амазонка', 'Янцзы', 'Миссисипи'],
+        difficulty: 'средний',
+      ),
 
       // Сложные вопросы
       Question(
@@ -134,23 +230,47 @@ class QuizService {
         incorrectAnswers: ['Япония', 'Корея', 'Вьетнам'],
         difficulty: 'сложный',
       ),
+      Question(
+        category: 'Искусство',
+        question: 'В каком веке жил Леонардо да Винчи?',
+        correctAnswer: 'XV век',
+        incorrectAnswers: ['XIV век', 'XVI век', 'XVII век'],
+        difficulty: 'сложный',
+      ),
+      Question(
+        category: 'Философия',
+        question: 'Кто является автором "Государства"?',
+        correctAnswer: 'Платон',
+        incorrectAnswers: ['Аристотель', 'Сократ', 'Эпикур'],
+        difficulty: 'сложный',
+      ),
     ];
   }
 
-  // Метод для получения вопросов по сложности
-  List<Question> getQuestionsByDifficulty(String difficulty) {
-    return getQuestions().where((question) => question.difficulty == difficulty).toList();
-  }
+  // Метод для получения вопросов по сложности из API с fallback
+  Future<List<Question>> getQuestionsByDifficulty(String difficulty) async {
+    try {
+      // Маппинг сложности для API
+      String apiDifficulty;
+      switch (difficulty) {
+        case 'легкий': apiDifficulty = 'easy'; break;
+        case 'средний': apiDifficulty = 'medium'; break;
+        case 'сложный': apiDifficulty = 'hard'; break;
+        default: apiDifficulty = 'easy';
+      }
 
-  // Метод для получения случайных вопросов
-  List<Question> getRandomQuestions(int count, {String? difficulty}) {
-    List<Question> allQuestions = getQuestions();
+      final apiQuestions = await getQuestionsFromApi(
+        amount: 8,
+        difficulty: apiDifficulty,
+      );
 
-    if (difficulty != null) {
-      allQuestions = allQuestions.where((q) => q.difficulty == difficulty).toList();
+      return apiQuestions;
+    } catch (e) {
+      // Fallback на локальные вопросы
+      print('API недоступен, используем локальные вопросы: $e');
+      return getLocalQuestions()
+          .where((question) => question.difficulty == difficulty)
+          .toList();
     }
-
-    allQuestions.shuffle();
-    return allQuestions.length <= count ? allQuestions : allQuestions.sublist(0, count);
   }
 }
